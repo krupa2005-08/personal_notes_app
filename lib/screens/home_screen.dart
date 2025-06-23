@@ -48,17 +48,24 @@ class HomeScreen extends ConsumerWidget {
                   return ValueListenableBuilder(
                     valueListenable: box.listenable(),
                     builder: (context, Box<Note> box, _) {
-                      final allNotes = box.values.toList();
-                      final filteredNotes =
-                          allNotes
-                              .where((note) {
-                                return note.title.toLowerCase().contains(searchQuery.toLowerCase());
-                              })
-                              .toList()
-                              .reversed
-                              .toList();
+                      final allNotesWithIndices =
+                          box.toMap().entries.map((entry) {
+                            return (index: entry.key as int, note: entry.value as Note);
+                          }).toList();
 
-                      if (filteredNotes.isEmpty) {
+                      // 2. Filter this list of records.
+                      final query = searchQuery.toLowerCase();
+                      final filteredNotes =
+                          allNotesWithIndices.where((record) {
+                            final title = record.note.title.toLowerCase();
+                            final description = record.note.description.toLowerCase();
+                            return title.contains(query) || description.contains(query);
+                          }).toList();
+
+                      // 3. Reverse the final list to show newest notes first.
+                      final displayedNotes = filteredNotes.reversed.toList();
+
+                      if (displayedNotes.isEmpty) {
                         return Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -77,8 +84,9 @@ class HomeScreen extends ConsumerWidget {
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
                         itemBuilder: (context, index) {
-                          final note = filteredNotes[index];
-                          final originalIndex = allNotes.indexOf(note);
+                          final record = displayedNotes[index];
+                          final note = record.note;
+                          final originalIndex = record.index;
 
                           return InkWell(
                             onTap: () {
