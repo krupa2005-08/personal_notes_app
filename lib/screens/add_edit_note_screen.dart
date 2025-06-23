@@ -1,7 +1,6 @@
-// lib/screens/add_edit_note_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+
 import '../models/note.dart';
 
 class AddEditNoteScreen extends StatefulWidget {
@@ -15,7 +14,6 @@ class AddEditNoteScreen extends StatefulWidget {
 }
 
 class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
-  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   late bool _isEditMode;
@@ -36,26 +34,33 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
   }
 
   void _saveNote() {
-    if (_formKey.currentState!.validate()) {
-      final notesBox = Hive.box<Note>('notes');
-      final String title = _titleController.text;
-      final String description = _descriptionController.text;
+    // Basic validation
+    final title = _titleController.text;
+    final description = _descriptionController.text;
 
-      if (_isEditMode) {
-        // Update existing note
-        final updatedNote = Note(
-          title: title,
-          description: description,
-          createdAt: widget.note!.createdAt, // Keep original creation date
-        );
-        notesBox.putAt(widget.noteIndex!, updatedNote);
-      } else {
-        // Add new note
-        final newNote = Note(title: title, description: description, createdAt: DateTime.now());
-        notesBox.add(newNote);
-      }
-      Navigator.pop(context); // Go back to the home screen
+    if (title.isEmpty || description.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Title and description cannot be empty.'), backgroundColor: Colors.red));
+      return; // Stop the function if validation fails
     }
+
+    final notesBox = Hive.box<Note>('notes');
+
+    if (_isEditMode) {
+      // Update existing note
+      final updatedNote = Note(
+        title: title,
+        description: description,
+        createdAt: widget.note!.createdAt, // Keep original creation date
+      );
+      notesBox.putAt(widget.noteIndex!, updatedNote);
+    } else {
+      // Add new note
+      final newNote = Note(title: title, description: description, createdAt: DateTime.now());
+      notesBox.add(newNote);
+    }
+    Navigator.pop(context); // Go back to the home screen
   }
 
   @override
@@ -63,38 +68,45 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditMode ? 'Edit Note' : 'Add Note'),
-        actions: [IconButton(icon: Icon(Icons.save), onPressed: _saveNote, tooltip: 'Save Note')],
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        actions: [IconButton(icon: Icon(Icons.save_outlined), onPressed: _saveNote, tooltip: 'Save Note')],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _titleController,
-                decoration: InputDecoration(labelText: 'Title', border: OutlineInputBorder()),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a title';
-                  }
-                  return null;
-                },
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+        child: Column(
+          children: [
+            // --- Improved Title TextField ---
+            TextField(
+              controller: _titleController,
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: 'Title',
+                hintStyle: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.grey.withOpacity(0.7)),
               ),
-              SizedBox(height: 16),
-              TextFormField(
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              maxLines: null, // Allows title to wrap if it's very long
+            ),
+            SizedBox(height: 10),
+            // --- Improved Description TextField ---
+            Expanded(
+              child: TextField(
                 controller: _descriptionController,
-                decoration: InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
-                maxLines: 10, // Multiline
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a description';
-                  }
-                  return null;
-                },
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  hintText: 'Start typing your note here...',
+                  hintStyle: TextStyle(fontSize: 18),
+                ),
+                style: TextStyle(
+                  fontSize: 18,
+                  height: 1.5, // Improves line spacing for readability
+                ),
+                maxLines: null, // Fills the available space
+                expands: true, // Ensures it takes up all vertical space
+                keyboardType: TextInputType.multiline,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
